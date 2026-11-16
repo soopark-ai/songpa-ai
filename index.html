@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엄마·아빠를 위한 AI 비서 만들기</title>
+<style>
+:root{
+  --bg:#fffaf0; --card:#ffffff; --ink:#2b2a33; --muted:#6b6877; --line:#f0e3c8;
+  --accent:#f59e0b; --accent-ink:#5a3b00; --soft:#fff3d6;
+  --gem:#4f7cff; --gpt:#10a37f; --ok:#16a34a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1a20; --card:#25242c; --ink:#f3f1f7; --muted:#b0adbb; --line:#3a3845;
+    --accent:#fbbf24; --accent-ink:#2b1d00; --soft:#33301f;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  font-size:18px;line-height:1.65;-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 80px}
+
+/* 맨 위 AI 바로가기 */
+.ai-bar{position:sticky;top:0;z-index:10;background:var(--bg);padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.ai-bar .label{font-size:14px;color:var(--muted);margin:0 0 6px;text-align:center}
+.ai-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ai-btns a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:56px;border-radius:14px;
+  color:#fff;text-decoration:none;font-weight:800;font-size:19px}
+.ai-btns .gem{background:var(--gem)} .ai-btns .gpt{background:var(--gpt)}
+.ai-btns a:active{transform:scale(.98)}
+
+header.hero{text-align:center;padding:28px 0 8px}
+.hero .emoji{font-size:44px}
+.hero h1{font-size:27px;line-height:1.35;margin:6px 0 4px}
+.hero p{margin:0;color:var(--muted)}
+.hero .org{margin-top:10px;display:inline-block;background:var(--soft);padding:4px 14px;border-radius:999px;font-size:15px}
+
+.tip{background:var(--soft);border-radius:14px;padding:14px 16px;margin:18px 0;font-size:16px}
+
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+nav.toc a{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;
+  text-decoration:none;color:var(--ink);font-size:15px;font-weight:700}
+
+section{margin-top:34px;scroll-margin-top:130px}
+section h2{font-size:23px;margin:0 0 4px}
+section .sub{color:var(--muted);margin:0 0 14px;font-size:16px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}
+.card h3{margin:0 0 8px;font-size:19px}
+.pre{font-size:15px;color:var(--muted);margin:0 0 8px}
+.prompt{background:var(--soft);border-radius:12px;padding:14px;margin:8px 0;white-space:pre-wrap;word-break:keep-all;font-size:17px}
+.copy{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:52px;
+  border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:800;font-size:18px;cursor:pointer}
+.copy:active{transform:scale(.98)}
+.copy.done{background:var(--ok);color:#fff}
+.note{font-size:15px;color:var(--muted);margin:10px 0 0}
+.note.warn{color:#b45309}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .note.warn{color:#fbbf24}}
+
+.bad,.good{border-radius:12px;padding:12px 14px;margin:8px 0}
+.bad{background:#fde8e8;color:#7a1f1f} .good{background:#e3f6ea;color:#14532d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .bad{background:#3b2326;color:#fecaca}
+ :root:not([data-theme="light"]) .good{background:#1e3328;color:#bbf7d0}}
+.bad b,.good b{display:block;font-size:14px;margin-bottom:2px}
+
+.tool{display:grid;gap:12px}
+@media(min-width:620px){.tool{grid-template-columns:1fr 1fr}}
+.tool ol{margin:6px 0 0;padding-left:22px}
+.tool li{margin:4px 0}
+
+.safe{counter-reset:s;list-style:none;padding:0;margin:0}
+.safe li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px 12px 52px;margin:8px 0;position:relative}
+.safe li::before{content:counter(s);position:absolute;left:14px;top:12px;width:28px;height:28px;border-radius:50%;
+  background:var(--accent);color:var(--accent-ink);font-weight:800;display:grid;place-items:center;font-size:15px}
+.safe small{display:block;color:var(--muted)}
+
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.quick button{flex:1 1 90px;min-height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:800;cursor:pointer}
+.quick button.done{background:var(--ok);color:#fff;border-color:var(--ok)}
+
+.long{max-height:260px;overflow:auto}
+.badge{display:inline-block;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:14px;padding:2px 10px;border-radius:999px;margin-bottom:6px}
+footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 맨 위: 제미나이 / 챗GPT 바로가기 -->
+  <div class="ai-bar">
+    <p class="label">복사한 프롬프트를 여기에 붙여넣으세요 👇</p>
+    <div class="ai-btns">
+      <a class="gem" href="https://gemini.google.com/app" target="_blank" rel="noopener">✨ 제미나이</a>
+      <a class="gpt" href="https://chatgpt.com/" target="_blank" rel="noopener">💬 챗GPT</a>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="emoji">🤖💛</div>
+    <h1>엄마·아빠를 위한<br>AI 비서 만들기</h1>
+    <p>AI에게 맡기고, 나를 위한 시간 만들기</p>
+    <span class="org">송파장애인가족지원센터 · AI 강사 박수현</span>
+  </header>
+
+  <div class="tip">
+    <b>사용법</b> ① 아래 <b>[복사하기]</b> 버튼을 누르고 → ② 위의 <b>제미나이/챗GPT</b>를 열어 → ③ 입력창에 <b>붙여넣기</b>하면 끝!<br>
+    타자가 느리면 입력창의 <b>🎤 마이크 버튼</b>을 눌러 말로 하세요.
+  </div>
+
+  <nav class="toc">
+    <a href="#start">첫 대화</a>
+    <a href="#p1">1 물어보기</a>
+    <a href="#p2">2 서류 풀기</a>
+    <a href="#p3">3 글쓰기</a>
+    <a href="#p4">4 우리 아이</a>
+    <a href="#p5">5 바이브코딩</a>
+    <a href="#how">도구 사용법</a>
+    <a href="#safe">안전 수칙</a>
+  </nav>
+
+  <section id="start">
+    <h2>🍳 첫 대화 해보기</h2>
+    <p class="sub">AI와 대화가 이어지는 걸 느껴보세요!</p>
+    <div class="card">
+      <div class="prompt" data-copy>오늘 저녁에 아이가 좋아하는 계란, 두부, 시금치로 간단하게 만들 수 있는 반찬 알려줘</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">이어서 말해보세요 → "더 쉽게 알려줘" · "5분 안에 되는 걸로"</p>
+    </div>
+  </section>
+
+  <section id="p1">
+    <h2>🔍 PART 1 · 궁금한 걸 물어보기</h2>
+    <p class="sub">내 상황을 먼저 알려주면 답이 쑥쑥 좋아져요</p>
+
+    <div class="card">
+      <h3>👍 이렇게 물어보면 더 좋아요</h3>
+      <div class="bad"><b>😕 아쉬운 질문</b>"장애인 혜택 알려줘"</div>
+      <div class="good"><b>😄 좋은 질문</b></div>
+      <div class="prompt" data-copy>서울 송파구에 사는 8살 발달장애 아이 부모야. 신청할 수 있는 복지 서비스를 표로 정리해줘.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">내 아이 나이·사는 곳에 맞게 숫자와 지역을 바꿔 보세요.</p>
+    </div>
+
+    <div class="card">
+      <h3>🏥 병원 가기 전 질문 만들기</h3>
+      <div class="prompt" data-copy>내일 소아정신과 진료야. 아이는 최근 밤에 자주 깨고 학교 가기를 싫어해. 의사에게 물어볼 질문 7개를 만들어줘.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">📱 만든 질문은 카톡 '나에게 보내기'로 저장해서 진료실에서 보세요!</p>
+    </div>
+
+    <div class="card">
+      <h3>⚠️ 꼭 기억해요! AI도 틀릴 수 있어요</h3>
+      <p style="margin:0">복지 제도·금액·신청 기한은 꼭 다시 확인하세요!</p>
+      <p class="note">🏛️ 복지로 · 🏢 송파구청 · 📞 센터 전화<br>AI는 '어디서부터 알아볼지' 알려주는 안내자예요.</p>
+    </div>
+  </section>
+
+  <section id="p2">
+    <h2>📄 PART 2 · 어려운 서류 쉽게 풀기</h2>
+    <p class="sub">사진 한 장이면 끝!</p>
+
+    <div class="card">
+      <h3>📷 안내문을 쉬운 말로</h3>
+      <p class="pre">먼저 사진을 올리고(카메라 버튼 → 글씨가 다 나오게!) 아래 글을 붙여넣어요.</p>
+      <div class="prompt" data-copy>이 안내문을 초등학교 6학년도 이해할 수 있게 쉬운 말로 설명해줘. 그리고 내가 해야 할 일을 날짜 순서대로 체크리스트로 만들어줘.</div>
+      <button class="copy">📋 복사하기</button>
+    </div>
+
+    <div class="card">
+      <h3>🩺 검사결과지 이해하기</h3>
+      <p class="pre">먼저 사진을 올리고 아래 글을 붙여넣어요.</p>
+      <div class="prompt" data-copy>이 검사결과지의 용어를 쉬운 말로 풀어줘. 우리 아이의 강점과 도움이 필요한 부분을 나눠서 정리해줘. 진단이나 치료 판단은 하지 말고 설명만 해줘.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note warn">👩‍⚕️ AI는 의사가 아니에요. 판단은 꼭 선생님과 상의하세요!</p>
+    </div>
+  </section>
+
+  <section id="p3">
+    <h2>✍️ PART 3 · 글쓰기 도우미</h2>
+    <p class="sub">하고 싶은 말을 편하게 말하면 AI가 다듬어줘요</p>
+
+    <div class="card">
+      <h3>💌 선생님께 보내는 문자</h3>
+      <div class="prompt" data-copy>학교 담임선생님께 보낼 문자를 써줘. 내용: 아이가 요즘 소리에 예민해서 급식실에서 힘들어해. 이어플러그를 써도 되는지 여쭤보고 싶어. 따뜻하고 정중하게 5문장 이내로.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">✏️ 다 쓴 글은 내 말투로 한 번 읽어보고 고치기!</p>
+    </div>
+
+    <div class="card">
+      <h3>🧒 우리 아이 소개글 만들기</h3>
+      <div class="prompt" data-copy>새로운 선생님께 우리 아이를 소개하는 글을 만들어줘. 좋아하는 것: 공룡, 파란색, 노래. 힘들어하는 것: 큰 소리, 갑작스러운 일정 변경. 진정되는 방법: 조용한 곳에서 안아주기.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">🌟 한 번 만들어 두면 새 학기마다 계속 쓸 수 있어요!</p>
+    </div>
+
+    <div class="card">
+      <h3>📝 신청 사유서 쓰기</h3>
+      <div class="prompt" data-copy>활동지원 서비스 시간을 늘려달라고 요청하는 사유서를 써줘. 상황: 내가 아이를 혼자 돌보고 있고 직장 때문에 오후 돌봄이 필요해. 담당자가 이해하기 쉽게 구체적으로.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note warn">🔒 실제 이름·주소는 넣지 말고, 나중에 직접 써넣으세요!</p>
+    </div>
+
+    <div class="card">
+      <h3>💗 마음도 챙겨요</h3>
+      <div class="prompt" data-copy>요즘 너무 지치고 힘들어.
+하소연 좀 들어줘. 해결책 말고 먼저 공감해줘.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">🤗 하지만 AI는 가족을 대신할 수 없어요. 많이 힘들 땐 꼭 센터 상담을 이용하세요.</p>
+    </div>
+  </section>
+
+  <section id="p4">
+    <h2>🧸 PART 4 · 우리 아이를 위한 AI</h2>
+    <p class="sub">이야기·일과표·놀이를 바로 만들어요</p>
+
+    <div class="card">
+      <h3>📖 마음이 편해지는 이야기</h3>
+      <div class="prompt" data-copy>7살 아이가 병원에서 주사 맞는 걸 무서워해. 아이가 안심할 수 있는 짧은 이야기를 써줘. 주인공은 공룡이고 한 문장씩 쉽게 총 8문장으로.</div>
+      <button class="copy">📋 복사하기</button>
+      <p class="note">🦖 미리 이야기로 알려주면 불안이 줄어요! 이발소·치과·첫 등교·지하철에도 써보세요.</p>
+    </div>
+
+    <div class="card">
+      <h3>📅 하루 일과표</h3>
+      <div class="prompt" data-copy>기상부터 취침까지 7살 아이의 하루 일과표를 그림 카드로 만들 수 있게 짧고 쉬운 말로 나눠줘.</div>
+      <button class="copy">📋 복사하기</button>
+    </div>
+
+    <div class="card">
+      <h3>🎲 집에서 하는 놀이 아이디어</h3>
+      <div class="prompt" data-copy>7살, 말이 느린 아이와 집에서 10분 할 수 있는 놀이 5가지를 준비물 거의 없이 알려줘.</div>
+      <button class="copy">📋 복사하기</button>
+    </div>
+  </section>
+
+  <section id="redo">
+    <h2>🔄 답이 마음에 안 들 때</h2>
+    <p class="sub">버튼을 눌러 복사한 뒤 이어서 붙여넣어요</p>
+    <div class="quick">
+      <button data-text="다시">🔄 다시</button>
+      <button data-text="더 쉽게">🐣 더 쉽게</button>
+      <button data-text="더 짧게">✂️ 더 짧게</button>
+    </div>
+    <p class="note">🏠 냉장고에 프롬프트 카드를 붙여두고 "이거 AI한테 시켜볼까?" 한 번만 떠올리면 성공!</p>
+  </section>
+
+  <section id="how">
+    <h2>📋 AI 도구 사용법</h2>
+    <p class="sub">처음이라면 이 순서대로 따라 해요</p>
+    <div class="tool">
+      <div class="card">
+        <h3>✨ 제미나이</h3>
+        <ol>
+          <li>gemini.google.com 접속 → 구글 계정 로그인</li>
+          <li>가운데 입력창에 궁금한 것을 쓰면 바로 대답</li>
+          <li>입력창 왼쪽 <b>＋</b> → 파일 올리기, 이미지 만들기</li>
+          <li>왼쪽 <b>더보기 → Gems</b>에서 나만의 도우미(Storybook 등)</li>
+          <li>Storybook: 주제·읽을 아이 나이·그림 스타일을 알려 주기</li>
+          <li>왼쪽 아래 설정(톱니) → <b>개인 인텔리전스</b>에서 메모리 켜기</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>💬 챗GPT</h3>
+        <ol>
+          <li>chatgpt.com 접속 → 로그인</li>
+          <li>'준비되면 시작하세요.' 아래 입력창에 질문 쓰기</li>
+          <li><b>＋</b> 버튼 → 사진·파일 추가, 이미지 생성, 웹 검색</li>
+          <li>왼쪽 아래 내 이름 → 설정 → <b>개인 맞춤 설정</b></li>
+          <li>메모리를 켜면 나에 대해 기억해요 (관리 버튼으로 확인)</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="p5">
+    <h2>💻 PART 5 · 바이브코딩으로 앱 만들기</h2>
+    <p class="sub">말로 설명하면 AI가 앱을 만들어줘요. 복사해서 붙여넣어 보세요!</p>
+
+    <div class="card">
+      <h3>📇 우리 아이 소개서 앱</h3>
+      <div class="prompt long" data-copy>장애가 있는 자녀를 둔 부모가 쓰는 "우리 아이 소개서" 웹앱을 만들어 줘.
+새 담임, 활동지원사, 치료사, 돌봄 선생님에게 아이를 소개하는 한 장짜리 카드를 만드는 앱이야.
+
+[사용자]
+- 스마트폰을 주로 쓰는 부모. IT에 익숙하지 않으니 설명 없이도 쓸 수 있어야 해.
+
+[입력 항목]
+- 기본 정보: 이름(또는 애칭), 사진, 나이, 한 줄 소개
+- 좋아하는 것 / 싫어하는 것
+- 의사소통 방식: 어떻게 표현하는지, 어떻게 말해 주면 잘 이해하는지
+- 힘들 때 보이는 신호와 진정시키는 방법
+- 식사, 화장실, 이동 등 일상에서 도움이 필요한 부분
+- 건강 정보: 복용 약, 알레르기, 발작 등 주의사항과 대처법
+- 꼭 지켜 주세요 (안전 관련 당부)
+- 비상 연락처
+- 부모가 직접 이름을 붙이는 추가 항목
+모든 항목은 선택 입력이고, 비워 둔 항목은 카드에 나오지 않게 해 줘.
+항목마다 무엇을 쓰면 좋을지 예시 문장을 흐리게 보여 줘.
+
+[소개 카드]
+- 입력한 내용이 A4 한 장 분량의 따뜻하고 읽기 쉬운 카드로 정리돼.
+- 받는 사람이 1분 안에 읽을 수 있게, 안전과 건강 관련 내용이 가장 눈에 띄어야 해.
+- "이미지로 저장" 버튼과 "인쇄" 버튼을 넣어 줘.
+- 카드 색상 테마를 3~4가지 중에 고를 수 있게 해 줘.
+- 받는 사람에 따라 보여 줄 항목을 켜고 끌 수 있게 해 줘.
+  (예: 체험학습 선생님에게는 건강 정보와 연락처만)
+
+[기술 조건]
+- 파일 하나로 된 모바일 우선 웹앱, 로그인과 서버 없음.
+- 입력 내용은 이 기기에만 자동 저장되고 외부로 전송되지 않아. 이 사실을 화면에 한 줄로 안내해 줘.
+- 사진은 저장 전에 작게 줄여 줘.
+- 글자는 크게, 버튼은 손가락으로 누르기 쉽게, 색 대비는 충분하게.
+- 처음 열면 가상의 아이 "하늘이"의 예시가 채워져 있고, "내 아이 정보로 시작하기"를 누르면 비워지게 해 줘.
+- 모든 화면 문구는 부드러운 한국어 존댓말로.</div>
+      <button class="copy">📋 복사하기</button>
+    </div>
+
+    <div class="card">
+      <h3>🗣️ 맞춤 그림 의사소통판 앱</h3>
+      <div class="prompt long" data-copy>말로 표현하기 어려운 아이가 그림 카드를 눌러 의사를 전하는 "맞춤 그림 의사소통판" 웹앱을 만들어 줘.
+부모가 우리 아이가 실제로 쓰는 말과 사진으로 카드를 직접 만드는 것이 핵심이야.
+
+[아이가 쓰는 화면]
+- 큰 그림 카드가 격자로 보이고, 카드를 누르면 카드의 말을 한국어 음성으로 읽어 줘.
+- 누른 카드는 잠깐 커지거나 색이 바뀌어서 눌렸다는 것이 분명히 보여야 해.
+- 위쪽에 문장 띠가 있어서 누른 카드가 순서대로 쌓이고,
+  "말하기" 버튼을 누르면 이어서 읽어 줘. "지우기" 버튼도 넣어 줘.
+- 분류 탭: 기본 표현, 먹기, 놀이, 기분, 몸·아파요, 사람, 장소
+- "네", "아니요", "도와주세요", "그만"은 어느 화면에서든 항상 보이게 고정해 줘.
+- 아이가 실수로 다른 곳으로 나가지 않게, 이 화면에는 설정 버튼을 작게 숨겨 줘.
+
+[부모가 쓰는 편집 화면]
+- 설정 버튼을 2초간 길게 눌러야 들어갈 수 있어.
+- 카드 추가, 수정, 삭제, 순서 바꾸기
+- 카드 한 장 = 그림 + 글자 + 읽어 줄 말 (읽어 줄 말은 글자와 다르게 쓸 수 있어)
+- 그림은 휴대폰으로 사진을 찍거나 앨범에서 고르거나, 이모지 중에서 선택해.
+- 분류 추가와 이름 변경
+- 한 화면의 카드 수 조절 (2칸, 3칸, 4칸), 말하는 속도 조절
+- 카드 전체를 파일로 내보내고 다시 불러오는 백업 기능
+
+[기본 제공 카드]
+- 처음부터 분류마다 6~8장씩 이모지로 된 기본 카드가 들어 있게 해 줘.
+  (예: 물 주세요, 배고파요, 화장실, 아파요, 안아 주세요, 더 하고 싶어요, 싫어요, 집에 가요)
+- 그림은 이모지나 직접 그린 단순한 도형만 쓰고, 외부 그림 자료는 가져오지 마.
+
+[기술 조건]
+- 파일 하나로 된 웹앱, 로그인과 서버 없음, 인터넷이 끊겨도 동작해야 해.
+- 음성은 브라우저에 내장된 한국어 음성 읽기 기능을 써 줘.
+- 카드와 사진은 이 기기에만 저장돼. 사진이 많아져도 괜찮도록 작게 줄여서 용량이 넉넉한 저장 방식으로 보관해 줘.
+- 휴대폰과 태블릿 모두, 세로와 가로 화면 모두에서 카드가 화면을 꽉 채우게 해 줘.
+- 배경은 단순하게, 색 대비는 뚜렷하게, 움직이는 효과는 최소로.</div>
+      <button class="copy">📋 복사하기</button>
+    </div>
+
+    <p class="note">AI가 만들어 준 앱에는 아이 이름·사진 등 개인정보를 올리기 전에 어디에 저장되는지 꼭 확인하세요.</p>
+  </section>
+
+  <section id="safe">
+    <h2>🛡️ AI 안전 수칙 5가지</h2>
+    <ol class="safe">
+      <li>🔒 개인정보는 넣지 않아요<small>주민번호·전화번호·주소·아이 실명</small></li>
+      <li>👩‍⚕️ 의료·법률 판단은 전문가에게</li>
+      <li>✅ AI도 틀려요, 공식 사이트에서 확인</li>
+      <li>🙈 서류는 이름·번호를 가리고 올려요</li>
+      <li>🚫 모르는 링크·결제는 누르지 않아요</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="tip" style="text-align:center">
+      🎉 <b>오늘 집에 가서 딱 한 가지만 써보기!</b><br>
+      어려운 공부가 아니에요. 말로 시키면 되는 비서예요!
+    </div>
+  </section>
+
+  <footer>
+    감사합니다 💛<br>AI 강사 박수현 · mermaidm@daum.net · 010-7766-1380
+  </footer>
+</div>
+
+<script>
+(function(){
+  function copyText(t){
+    if(navigator.clipboard && window.isSecureContext){
+      return navigator.clipboard.writeText(t);
+    }
+    return new Promise(function(res,rej){
+      var ta=document.createElement('textarea');
+      ta.value=t; ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,t.length);
+      try{ document.execCommand('copy') ? res() : rej(); }catch(e){ rej(e); }
+      document.body.removeChild(ta);
+    });
+  }
+  function flash(btn, okText){
+    var old=btn.dataset.old||btn.textContent;
+    btn.dataset.old=old;
+    btn.textContent=okText; btn.classList.add('done');
+    clearTimeout(btn._t);
+    btn._t=setTimeout(function(){btn.textContent=old;btn.classList.remove('done');},1800);
+  }
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var box=btn.parentElement.querySelector('[data-copy]');
+      copyText(box.innerText.trim()).then(function(){flash(btn,'✅ 복사됐어요! 이제 붙여넣기');})
+        .catch(function(){flash(btn,'길게 눌러 직접 복사해 주세요');});
+    });
+  });
+  document.querySelectorAll('.quick button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      copyText(btn.dataset.text).then(function(){flash(btn,'✅ 복사됨');}).catch(function(){});
+    });
+  });
+})();
+</script>
+</body>
+</html>
